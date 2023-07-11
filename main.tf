@@ -35,3 +35,12 @@ resource "aws_subnet" "tuesdayprivatesubnet" {
         Name = "tuesdayprivatesubnet"
     }
 }
+
+resource "aws_route_table" "tuesdaypubroute" {
+    vpc_id = aws_vpc.tuesday-learning.id
+    
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = aws_internet_gateway.tuesdayigw.id
+    }
+}
