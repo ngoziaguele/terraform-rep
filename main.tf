@@ -44,3 +44,7 @@ resource "aws_route_table" "tuesdaypubroute" {
         gateway_id = aws_internet_gateway.tuesdayigw.id
     }
 }
+resource "aws_route_table_association" "pubassociation" {
+    subnet_id = aws_subnet.tuesdaypublicsubnet.id
+    route_table_id = aws_route_table.tuesdaypubroute.id
+}
