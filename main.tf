@@ -26,3 +26,12 @@ resource "aws_subnet" "tuesdaypublicsubnet" {
         Name = "tuesdaypublicsubnet"
     }
 }
+
+resource "aws_subnet" "tuesdayprivatesubnet" {
+    vpc_id = aws_vpc.tuesday-learning.id
+    cidr_block = "192.168.0.16/28"
+
+    tags = {
+        Name = "tuesdayprivatesubnet"
+    }
+}
