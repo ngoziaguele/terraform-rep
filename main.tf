@@ -16,3 +16,13 @@ resource "aws_internet_gateway" "tuesdayigw" {
     }    
         
 }
+
+
+resource "aws_subnet" "tuesdaypublicsubnet" {
+    vpc_id = aws_vpc.tuesday-learning.id
+    cidr_block = "192.168.0.0/28"
+
+    tags = {
+        Name = "tuesdaypublicsubnet"
+    }
+}
