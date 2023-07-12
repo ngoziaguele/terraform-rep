@@ -1,5 +1,5 @@
 resource "aws_vpc" "tuesday-learning" {
-    cidr_block = "192.168.0.0/24"
+    cidr_block = var.vpc_cidr
     instance_tenancy = "default"
     tags = {
         Name = "tuesday-learning"
@@ -24,13 +24,14 @@ resource "aws_subnet" "tuesdaypublicsubnet" {
     cidr_block = element((var.cidrs), count.index)
     availability_zone = element((var.az), count.index)
 
-    tags = {
-        Name = "tuesdaypublicsubnet"
-    }
+    # tags = {
+    #     Name = "${element(var.public_subnet, count.index)}"
+    # }
 }
 
 resource "aws_subnet" "tuesdayprivatesubnet" {
     vpc_id = aws_vpc.tuesday-learning.id
+    availability_zone = "eu-west-2c"
     
     cidr_block = "192.168.0.16/28"
     tags = {
@@ -75,4 +76,20 @@ resource "aws_security_group" "tuesdaysg" {
         cidr_blocks = ["0.0.0.0/0"]
     }
 
+}
+resource "aws_instance" "tuesday-learning" {
+    count = 2
+    ami = "ami-0eb260c4d5475b901"
+    key_name = "class2"
+    instance_type = "t2.micro"
+    vpc_security_group_ids = [aws_security_group.tuesdaysg.id]
+    user_data = filebase64("script.sh")
+    associate_public_ip_address = true 
+    
+    subnet_id = element(aws_subnet.tuesdaypublicsubnet.*.id, count.index)
+
+
+    tags = {
+        Name = "${element(var.public_subnet, count.index)}-instance"
+    }
 }
