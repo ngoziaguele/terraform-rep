@@ -131,8 +131,8 @@ resource "aws_nat_gateway" "main" {
     count = 3
     allocation_id = element(aws_eip.lb.*.id, count.index)
     subnet_id = element(aws_subnet.tuesdaypublicsubnet.*.id, count.index)
-tags = {
-   Name = "${element(var.nat_gateway, count.index)}" 
+    tags = {
+        Name = "${element(var.nat_gateway, count.index)}" 
 }
 
 
