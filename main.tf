@@ -161,40 +161,143 @@ resource "aws_lb" "main" {
 
 }
 
-#resource "aws_acm_certificate" "cert" {
-    #domain_name = "*.teddxo.com" 
-   # validation_method = "DNS"
-
-   # lifecycle {
-      #  create_before_destroy = true
-   #}
-#}
-
-#data "aws_route53_zone" "public" {
- #   name         = "teddxo.com"
-  #  private_zone = false
-#}
-
-#resource "aws_route53_record" "example" {
- # for_each = {
-  #  for dvo in aws_acm_certificate.example.domain_validation_options : dvo.domain_name => {
-   #   name   = dvo.resource_record_name
-    #  record = dvo.resource_record_value
-     # type   = dvo.resource_record_type
-    #}
-  #}
+resource "aws_lb_listener" "front_end" {
+    load_balancer_arn = aws_lb.main.arn
+    port = "443"
+    protocol = "HTTPS"
+    ssl_policy = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    certificate_arn = aws_acm_certificate.cert.arn
 
 
+    default_action {
+        type = "forward"
+        target_group_arn = aws_lb_target_group.main.arn
 
-#resource "aws_lb_listener" "main" {
-  #load_balancer_arn = aws_lb.main.arn
-  #port              = "443"
-  #protocol          = "HTTPS"
-  #ssl_policy        = "ELBSecurityPolicy-2016-08"
-  #certificate_arn   = "arn:aws:iam::187416307283:server-certificate/test_cert_rab3wuqwgja25ct3n4jdj2tzu4"
+  }
 
-  #default_action {
-    #type             = "forward"
-    #target_group_arn = aws_lb_target_group.front_end.arn
-  #}
-#}
+}
+
+data "aws_route53_zone" "public" {
+    name = "teddxo.com"
+    private_zone = false
+}
+
+resource "aws_acm_certificate" "cert" {
+    domain_name = "*.teddxo.com"
+    validation_method = "DNS"
+    subject_alternative_names = ["www.teddxo.com"]
+
+    lifecycle {
+        create_before_destroy = true
+    }
+}
+
+resource "aws_route53_record" "validation" {
+    for_each = {
+        for x in aws_acm_certificate.cert.domain_validation_options : x.domain_name => {
+            name = x.resource_record_name
+            record = x.resource_record_value
+            type = x.resource_record_type
+            zone_id = x.domain_name == "teddxo.com" ? data.aws_route53_zone.public.zone_id : data.aws_route53_zone.public.zone_id
+        }
+    }
+    allow_overwrite = true 
+    name = each.value.name
+    records = [each.value.record]
+    ttl = 300
+    type = each.value.type
+    zone_id = "Z040015929LO2MPJA3J64"
+}
+
+resource "aws_route53_record" "www" {
+    zone_id = "Z040015929LO2MPJA3J64"
+    name = "www.teddxo.com"
+    type = "A"
+
+    alias {
+        name = aws_lb.main.dns_name
+        zone_id = aws_lb.main.zone_id 
+        evaluate_target_health = true
+    }
+}
+
+resource "aws_s3_bucket" "main" {
+    bucket = "gee-bucket-123"
+    
+    tags = {
+        Name = "Ngee Aguele"
+        Environment = "Dev"
+    }
+}
+resource "aws_s3_bucket_ownership_controls" "main" {
+  bucket = aws_s3_bucket.main.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+resource "aws_s3_bucket_public_access_block" "main" {
+  bucket = aws_s3_bucket.main.id
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+resource "aws_s3_bucket_acl" "main" {
+  depends_on = [
+    aws_s3_bucket_ownership_controls.main,
+    aws_s3_bucket_public_access_block.main,
+  ]
+  bucket = aws_s3_bucket.main.id
+  acl    = "public-read"
+}
+resource "aws_s3_bucket_website_configuration" "main" {
+  bucket = aws_s3_bucket.main.bucket
+
+  index_document {
+    suffix = "index.html"
+  }
+  error_document {
+    key = "error.html"
+  }
+  routing_rule {
+    condition {
+      key_prefix_equals = "docs/"
+    }
+    redirect {
+      replace_key_prefix_with = "documents/"
+    }
+  }
+  depends_on = [aws_s3_bucket.main]
+}
+resource "aws_s3_bucket_object" "object" {
+  bucket = aws_s3_bucket.main.id
+  key    = "html"
+  source = "html"
+  depends_on = [aws_s3_bucket.main]
+}  
+resource "aws_launch_template" "main" {
+    name_prefix = "ngee"
+    image_id = "ami-0eb260c4d5475b901"
+    instance_type = "t2.micro"
+    vpc_security_group_ids = [aws_security_group.main.id]
+    key_name = "class2"
+    user_data = filebase64("script.sh")
+    
+    
+    
+}
+
+resource "aws_autoscaling_group" "main" {
+  desired_capacity   = 3
+  max_size           = 5
+  min_size           = 1
+  vpc_zone_identifier = aws_subnet.main_public.*.id
+  launch_template {
+    id      = aws_launch_template.main.id
+    version = "$Latest"
+  }
+}
+resource "aws_autoscaling_attachment" "main" {
+  autoscaling_group_name = aws_autoscaling_group.main.id
+  lb_target_group_arn    = aws_lb_target_group.main.arn
+}

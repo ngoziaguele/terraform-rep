@@ -40,13 +40,23 @@ variable "privatecidrs" {
     default = ["192.168.0.48/28", "192.168.0.64/28", "192.168.0.80/28"]
     type = list(string)
 }
-variable "elasticip" {
-    description = "elastic ip"
+# variable "elasticip" {
+#     description = "elastic ip"
 
-}
+# }
 
 variable "nat_gateway" {
     description = "nat gateway"
     default = ["nat-gateway1", "nat-gateway2", "nat-gateway3"]
     type = list(string)
+}
+
+variable "www_domain_name" {
+    description = "domain name"
+    default = "www.teddxo.com"
+}
+
+variable "root_domain_name" {
+    description = "root domain name"
+    default = "teddxo.com"
 }
